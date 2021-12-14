@@ -1,1 +1,37 @@
-// TODO
+.banner {
+    width: 100%;
+    max-height: 25rem;
+    object-fit: cover;
+}
+
+.post {
+    margin-top: 5rem;
+
+    h1 {
+        font-size: 3rem;
+        font-weight: bold;
+        color: var(--gray-50);
+        margin-bottom: 1.5rem;
+    }
+
+    time, span {
+        font-size: 0.875rem;
+        color: var(--gray-500);
+
+        display: inline-flex;
+        justify-content: center;
+        align-items: center;
+
+        svg {
+            margin-right: 0.5rem;
+        }
+
+        & + span {
+            margin-left: 1.5rem;
+        }
+    }
+}
+
+.postContent {
+    margin: 4rem 0 5rem;
+}

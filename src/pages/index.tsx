@@ -1,4 +1,5 @@
 import Head from 'next/head'
+import Link from 'next/link'
 import { GetStaticProps } from 'next';
 import Prismic from '@prismicio/client'
 
@@ -66,24 +67,26 @@ export default function Home({postsPagination}: HomeProps) {
   return(
     <>
       <Head>
-        <title>Home - Space Traveling</title>
+        <title>Home | Space Traveling</title>
       </Head>
-      <main className={styles.container}>
+      <main className={commonStyles.container}>
         <img className={styles.logo} src="/images/logo.svg" alt="logo" />
         <div className={styles.posts}>
           {posts.map(post => (
-            <a className={styles.post} href="#" key={post.uid} >
-              <strong>{post.data.title}</strong>
-              <p>{post.data.subtitle}</p>
-              <time>
-                <FiCalendar size={20} />
-                {post.first_publication_date}
-              </time>
-              <span>
-                <FiUser size={20} />
-                {post.data.author}
-              </span>
-            </a>
+            <Link key={post.uid} href={`/post/${post.uid}`}>
+              <a className={styles.post} >
+                <strong>{post.data.title}</strong>
+                <p>{post.data.subtitle}</p>
+                <time>
+                  <FiCalendar size={20} />
+                  {post.first_publication_date}
+                </time>
+                <span>
+                  <FiUser size={20} />
+                  {post.data.author}
+                </span>
+              </a>
+            </Link>
           ))}
         </div>
 
