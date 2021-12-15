@@ -1,7 +1,7 @@
 import { GetStaticPaths, GetStaticProps } from 'next';
 import Head from 'next/head'
 import { RichText } from 'prismic-dom'
-import { FiCalendar, FiUser } from 'react-icons/fi'
+import { FiCalendar, FiUser, FiClock } from 'react-icons/fi'
 
 import { format } from 'date-fns'
 import ptBR from 'date-fns/locale/pt-BR'
@@ -32,11 +32,10 @@ interface Post {
 
 interface PostProps {
   post: Post;
+  estimatedReadingTime: number;
 }
 
-export default function Post({post}: PostProps) {
-
-  console.log(post)
+export default function Post({post, estimatedReadingTime}: PostProps) {
 
   return(
     <>
@@ -58,6 +57,10 @@ export default function Post({post}: PostProps) {
             <FiUser size={20} />
             {post.data.author}
           </span>
+          <span>
+            <FiClock size={20} />
+            {`${estimatedReadingTime} min`}
+          </span>
           <div className={styles.postContent}>
             {post.data.content.map(({heading, body}) => (
               <div>
@@ -71,6 +74,27 @@ export default function Post({post}: PostProps) {
       </div>
     </>
   )
+}
+
+function calculationOfEstimatedReadingTimeOfThePost(amountWordsOfPost: number) {
+  const averageWordsPerMinute = 200
+  return Math.ceil(amountWordsOfPost/averageWordsPerMinute)
+}
+
+function calculationAmountWordsOfHeading(postContent: { heading: string, body: { text: string }[] }[]) {
+  return postContent.reduce((acc, data) => {
+    if (data.heading) {
+      return [...acc, ...data.heading.split(' ')]
+    }
+
+    return [...acc]
+  }, []).length
+}
+
+function calculationAmountWordsOfBody(postContent: { heading: string, body: { text: string }[] }[]) {
+  return RichText.asText(
+    postContent.reduce((acc, data) => [...acc, ...data.body], [])
+  ).split(' ').length
 }
 
 export const getStaticPaths: GetStaticPaths = async () => {
@@ -90,12 +114,10 @@ export const getStaticProps: GetStaticProps = async (context) => {
   const prismic = getPrismicClient();
   const response = await prismic.getByUID('posts', String(slug), {});
 
-  const content = response.data.content.map(content => {
-    return {
-      heading: content.heading,
-      body: [...content.body],
-    };
-  });
+  const amountWordsOfHeading = calculationAmountWordsOfHeading(response.data.content)
+  const amountWordsOfBody = calculationAmountWordsOfBody(response.data.content)
+  const amountWordsOfPost = amountWordsOfBody + amountWordsOfHeading
+  const estimatedReadingTime = calculationOfEstimatedReadingTimeOfThePost(amountWordsOfPost)
   
   const post = {
     first_publication_date: format(
@@ -111,13 +133,15 @@ export const getStaticProps: GetStaticProps = async (context) => {
         url: response.data.banner.url,
       },
       author: response.data.author,
-      content: content
+      content: response.data.content
     }
   }
 
   return {
     props: {
-      post
-    }
+      post,
+      estimatedReadingTime
+    },
+    revalidate: 60 * 30, //30 minutos
   }
 };
