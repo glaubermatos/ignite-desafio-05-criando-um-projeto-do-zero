@@ -1,5 +1,7 @@
 import { GetStaticPaths, GetStaticProps } from 'next';
 import Head from 'next/head'
+import { useRouter } from 'next/router'
+import Prismic from '@prismicio/client'
 import { RichText } from 'prismic-dom'
 import { FiCalendar, FiUser, FiClock } from 'react-icons/fi'
 
@@ -37,41 +39,50 @@ interface PostProps {
 
 export default function Post({post, estimatedReadingTime}: PostProps) {
 
+  const router = useRouter()
+
   return(
     <>
       <Head>
         <title>slug | Space Traveling</title>
       </Head>
 
-      <Header />
+      {router.isFallback ? (
+        <div>Loading...</div>
+      ) : (
+        <>
+          <Header />
 
-      <img className={styles.banner} src={post.data.banner.url} alt={post.data.title}/>
-      <div className={commonStyles.container}>
-        <article className={styles.post}>
-          <h1>{post.data.title}</h1>
-          <time>
-            <FiCalendar size={20} />
-            {post.first_publication_date}
-          </time>
-          <span>
-            <FiUser size={20} />
-            {post.data.author}
-          </span>
-          <span>
-            <FiClock size={20} />
-            {`${estimatedReadingTime} min`}
-          </span>
-          <div className={styles.postContent}>
-            {post.data.content.map(({heading, body}) => (
-              <div>
-                { heading && <h2>{ heading }</h2> }
+          <img className={styles.banner} src={post.data.banner.url} alt={post.data.title}/>
+          <div className={commonStyles.container}>
+            <article className={styles.post}>
+              <h1>{post.data.title}</h1>
+              <time>
+                <FiCalendar size={20} />
+                {post.first_publication_date}
+              </time>
+              <span>
+                <FiUser size={20} />
+                {post.data.author}
+              </span>
+              <span>
+                <FiClock size={20} />
+                {`${estimatedReadingTime} min`}
+              </span>
+              <div className={styles.postContent}>
+                {post.data.content.map(({heading, body}) => (
+                  <div key={heading}>
+                    { heading && <h2>{ heading }</h2> }
 
-                <div dangerouslySetInnerHTML={{ __html: RichText.asHtml(body) }} />
+                    <div dangerouslySetInnerHTML={{ __html: RichText.asHtml(body) }} />
+                  </div>
+                ))}
               </div>
-            ))}
+            </article>
           </div>
-        </article>
-      </div>
+        </>
+      )}
+
     </>
   )
 }
@@ -98,16 +109,31 @@ function calculationAmountWordsOfBody(postContent: { heading: string, body: { te
 }
 
 export const getStaticPaths: GetStaticPaths = async () => {
-  // const prismic = getPrismicClient();
-  // const posts = await prismic.query(TODO);
+  const prismic = getPrismicClient();
+  
+  const posts = await prismic.query(
+    [Prismic.Predicates.at('document.type', 'posts')], 
+    {
+      pageSize: 1
+    }
+  );
+
+  const paths = posts.results.map(post => {
+    return {
+      params: {
+        slug: post.uid
+      }
+    }
+  })
 
   return {
-    paths: [],
-    fallback: 'blocking'
+    paths,
+    fallback: true
   }
 };
 
 export const getStaticProps: GetStaticProps = async (context) => {
+  
   const { params } = context
   const { slug } = params
 
@@ -117,9 +143,10 @@ export const getStaticProps: GetStaticProps = async (context) => {
   const amountWordsOfHeading = calculationAmountWordsOfHeading(response.data.content)
   const amountWordsOfBody = calculationAmountWordsOfBody(response.data.content)
   const amountWordsOfPost = amountWordsOfBody + amountWordsOfHeading
+  
   const estimatedReadingTime = calculationOfEstimatedReadingTimeOfThePost(amountWordsOfPost)
   
-  const post = {
+  const post: Post = {
     first_publication_date: format(
       new Date(response.first_publication_date), 
       'd MMM y',
