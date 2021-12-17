@@ -19,7 +19,6 @@ interface Post {
   first_publication_date: string | null;
   data: {
     title: string;
-    //subtitle: string;
     banner: {
       url: string;
     };
@@ -35,7 +34,7 @@ interface Post {
 
 interface PostProps {
   post: Post;
-  //estimatedReadingTime: number;
+  estimatedReadingTime: number;
 }
 
 export default function Post({post}: PostProps) {
@@ -48,6 +47,12 @@ export default function Post({post}: PostProps) {
     return <div>Carregando...</div>
   }
 
+  const amountWordsOfHeading = calculationAmountWordsOfHeading(post.data.content)
+  const amountWordsOfBody = calculationAmountWordsOfBody(post.data.content)
+  const amountWordsOfPost = amountWordsOfBody + amountWordsOfHeading
+  
+  const estimatedReadingTime = calculationOfEstimatedReadingTimeOfThePost(amountWordsOfPost)
+
   return(
     <>
       <Head>
@@ -57,6 +62,7 @@ export default function Post({post}: PostProps) {
           <Header />
 
           <img className={styles.banner} src={post.data.banner.url} alt={post.data.title}/>
+
           <div className={commonStyles.container}>
             <article className={styles.post}>
               <h1>{post.data.title}</h1>
@@ -76,8 +82,7 @@ export default function Post({post}: PostProps) {
               </span>
               <span>
                 <FiClock size={20} />
-                4 min
-                {/* {`${estimatedReadingTime} min`} */}
+                {`${estimatedReadingTime} min`}
               </span>
               <div className={styles.postContent}>
                 {post.data.content.map(({heading, body}) => (
@@ -148,32 +153,29 @@ export const getStaticProps: GetStaticProps = async (context) => {
 
   const prismic = getPrismicClient();
   const response = await prismic.getByUID('posts', String(slug), {});
-
-  const amountWordsOfHeading = calculationAmountWordsOfHeading(response.data.content)
-  const amountWordsOfBody = calculationAmountWordsOfBody(response.data.content)
-  const amountWordsOfPost = amountWordsOfBody + amountWordsOfHeading
   
-  const estimatedReadingTime = calculationOfEstimatedReadingTimeOfThePost(amountWordsOfPost)
-  
-  const post: Post = {
+  const post = {
+    uid: response.uid,
     first_publication_date: response.first_publication_date,
     data: {
       title: response.data.title,
-      //subtitle: response.data.subtitle,
+      subtitle: response.data.subtitle,
       banner: {
         url: response.data.banner.url,
       },
       author: response.data.author,
-      content: response.data.content
+      content: response.data.content.map(content => {
+        return {
+          heading: content.heading,
+          body: [...content.body]
+        }
+      })
     }
   }
-
-  console.log(post)
 
   return {
     props: {
       post,
-      //estimatedReadingTime
     },
     revalidate: 60 * 30, //30 minutos
   }
