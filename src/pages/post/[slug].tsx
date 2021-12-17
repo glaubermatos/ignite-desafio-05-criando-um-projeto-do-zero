@@ -19,6 +19,7 @@ interface Post {
   first_publication_date: string | null;
   data: {
     title: string;
+    //subtitle: string;
     banner: {
       url: string;
     };
@@ -34,22 +35,24 @@ interface Post {
 
 interface PostProps {
   post: Post;
-  estimatedReadingTime: number;
+  //estimatedReadingTime: number;
 }
 
-export default function Post({post, estimatedReadingTime}: PostProps) {
+export default function Post({post}: PostProps) {
 
   const router = useRouter()
+
+  // If the page is not yet generated, this will be displayed
+  // initially until getStaticProps() finishes running
+  if (router.isFallback) {
+    return <div>Carregando...</div>
+  }
 
   return(
     <>
       <Head>
         <title>slug | Space Traveling</title>
       </Head>
-
-      {router.isFallback ? (
-        <div>Loading...</div>
-      ) : (
         <>
           <Header />
 
@@ -59,7 +62,13 @@ export default function Post({post, estimatedReadingTime}: PostProps) {
               <h1>{post.data.title}</h1>
               <time>
                 <FiCalendar size={20} />
-                {post.first_publication_date}
+                {format(
+                  new Date(post.first_publication_date), 
+                  'd MMM y',
+                  {
+                    locale: ptBR
+                  }
+                )}
               </time>
               <span>
                 <FiUser size={20} />
@@ -67,7 +76,8 @@ export default function Post({post, estimatedReadingTime}: PostProps) {
               </span>
               <span>
                 <FiClock size={20} />
-                {`${estimatedReadingTime} min`}
+                4 min
+                {/* {`${estimatedReadingTime} min`} */}
               </span>
               <div className={styles.postContent}>
                 {post.data.content.map(({heading, body}) => (
@@ -81,7 +91,6 @@ export default function Post({post, estimatedReadingTime}: PostProps) {
             </article>
           </div>
         </>
-      )}
 
     </>
   )
@@ -147,15 +156,10 @@ export const getStaticProps: GetStaticProps = async (context) => {
   const estimatedReadingTime = calculationOfEstimatedReadingTimeOfThePost(amountWordsOfPost)
   
   const post: Post = {
-    first_publication_date: format(
-      new Date(response.first_publication_date), 
-      'd MMM y',
-      {
-        locale: ptBR
-      }
-    ) ,
+    first_publication_date: response.first_publication_date,
     data: {
       title: response.data.title,
+      //subtitle: response.data.subtitle,
       banner: {
         url: response.data.banner.url,
       },
@@ -164,10 +168,12 @@ export const getStaticProps: GetStaticProps = async (context) => {
     }
   }
 
+  console.log(post)
+
   return {
     props: {
       post,
-      estimatedReadingTime
+      //estimatedReadingTime
     },
     revalidate: 60 * 30, //30 minutos
   }
